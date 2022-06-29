@@ -395,38 +395,58 @@ Cypress.Commands.add("gitDiscardChanges", (assertResourceFound = true) => {
   }
 });
 
-Cypress.Commands.add("regenerateSSHKey", (repo, generateKey = true) => {
-  let generatedKey;
-  cy.get(gitSyncLocators.bottomBarCommitButton).click();
-  cy.get("[data-cy=t--tab-GIT_CONNECTION]").click();
-  cy.wait(2000);
-  cy.get(gitSyncLocators.SSHKeycontextmenu).click();
-  cy.get(gitSyncLocators.regenerateSSHKey).click();
-  cy.contains(Cypress.env("MESSAGES").REGENERATE_KEY_CONFIRM_MESSAGE());
-  cy.xpath(gitSyncLocators.confirmButton).click();
-  cy.intercept("POST", "/api/v1/applications/ssh-keypair/*").as(
-    `generateKey-${repo}`,
-  );
-  if (generateKey) {
-    cy.wait(`@generateKey-${repo}`).then((result) => {
-      generatedKey = result.response.body.data.publicKey;
-      generatedKey = generatedKey.slice(0, generatedKey.length - 1);
-      // fetch the generated key and post to the github repo
-      cy.request({
-        method: "POST",
-        url: `${GITHUB_API_BASE}/repos/${Cypress.env(
-          "TEST_GITHUB_USER_NAME",
-        )}/${repo}/keys`,
-        headers: {
-          Authorization: `token ${Cypress.env("GITHUB_PERSONAL_ACCESS_TOKEN")}`,
-        },
-        body: {
-          title: "key0",
-          key: generatedKey,
-        },
-      });
+Cypress.Commands.add(
+  "regenerateSSHKey",
+  (repo, generateKey = true, protocol = "ECDSA") => {
+    let generatedKey;
+    cy.get(gitSyncLocators.bottomBarCommitButton).click();
+    cy.get("[data-cy=t--tab-GIT_CONNECTION]").click();
+    cy.wait(2000);
+    cy.get(gitSyncLocators.SSHKeycontextmenu).click();
+    if (protocol === "ECDSA") {
+      cy.get(gitSyncLocators.regenerateSSHKeyECDSA).click();
+    } else if (protocol === "RSA") {
+      cy.get(gitSyncLocators.regenerateSSHKeyRSA).click();
+    }
+    cy.contains(Cypress.env("MESSAGES").REGENERATE_KEY_CONFIRM_MESSAGE());
+    cy.xpath(gitSyncLocators.confirmButton).click();
+    if (protocol === "ECDSA") {
+      cy.intercept("POST", "/api/v1/applications/ssh-keypair/*").as(
+        `generateKey-${repo}`,
+      );
+    } else if (protocol === "RSA") {
+      cy.intercept("POST", "/api/v1/applications/ssh-keypair/*?keyType=RSA").as(
+        `generateKey-${repo}-RSA`,
+      );
+    }
 
-      cy.get(gitSyncLocators.closeGitSyncModal);
-    });
-  }
-});
+    if (generateKey) {
+      if (protocol === "ECDSA") {
+        cy.wait(`@generateKey-${repo}`).then((result) => {
+          generatedKey = result.response.body.data.publicKey;
+          generatedKey = generatedKey.slice(0, generatedKey.length - 1);
+          // fetch the generated key and post to the github repo
+          cy.request({
+            method: "POST",
+            url: `${GITHUB_API_BASE}/repos/${Cypress.env(
+              "TEST_GITHUB_USER_NAME",
+            )}/${repo}/keys`,
+            headers: {
+              Authorization: `token ${Cypress.env(
+                "GITHUB_PERSONAL_ACCESS_TOKEN",
+              )}`,
+            },
+            body: {
+              title: "key0",
+              key: generatedKey,
+            },
+          });
+
+          cy.get(gitSyncLocators.closeGitSyncModal);
+        });
+      } else if (protocol === "RSA") {
+        // doesn't work with github
+      }
+    }
+  },
+);

@@ -780,10 +780,12 @@ export function* generateSSHKeyPairSaga(action: GenerateSSHKeyPairReduxAction) {
   try {
     const applicationId: string = yield select(getCurrentApplicationId);
     const isImporting: string = yield select(getWorkspaceIdForImport);
+    const keyType = action.payload?.keyType || "ECDSA";
 
     response = yield call(
       GitSyncAPI.generateSSHKeyPair,
       applicationId,
+      keyType,
       !!isImporting,
     );
     const isValidResponse: boolean = yield validateResponse(

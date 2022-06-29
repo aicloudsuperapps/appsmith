@@ -55,6 +55,7 @@ export default {
   gitBranchContextMenu: ".git-branch-more-menu",
   gitBranchDelete: ".t--branch-more-menu-delete",
   SSHKeycontextmenu: ".bp3-popover-wrapper.more",
-  regenerateSSHKey: "[data-cy='t--regenerate-sshkey']",
+  regenerateSSHKeyECDSA: "[data-cy='t--regenerate-sshkey-ECDSA']",
+  regenerateSSHKeyRSA: "[data-cy='t--regenerate-sshkey-RSA']",
   confirmButton: "//span[text()='Yes']",
 };
